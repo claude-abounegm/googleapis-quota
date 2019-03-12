@@ -41,12 +41,16 @@ class GoogleApisQuota {
     }
 
     reset() {
-        if (common._createAPIRequest) {
-            common.createAPIRequest = common._createAPIRequest;
-        }
+        GoogleApisQuota.reset();
 
         if (this.quotaClient) {
             this.quotaClient.dispose();
+        }
+    }
+
+    static reset() {
+        if (common._createAPIRequest) {
+            common.createAPIRequest = common._createAPIRequest;
         }
     }
 
