@@ -4,8 +4,9 @@ const _ = require('lodash');
 const quota = require('quota');
 const common = require('googleapis-common');
 
-const paths = {
-    'core': {
+const cache = {};
+const paths = [{
+        managerName: 'core',
         regex: /\/data\/ga$/,
         getScope: ({
             params: {
@@ -26,7 +27,7 @@ const paths = {
     // 'real-time': /\/data\/realtime$/,
     // 'mcf': /\/data\/mcf$/,
     // 'management': /\/management\/.+$/
-};
+];
 
 class GoogleApisQuota {
     constructor(quotaServers, managerPrefix = 'ga') {
@@ -78,20 +79,57 @@ class GoogleApisQuota {
         const url = parameters.options.url;
         let grant;
         if (url) {
-            for (const [managerName, {
-                    regex,
+            let helper;
+            if (cache[url]) {
+                helper = cache[url];
+            } else {
+                for (const path of paths) {
+                    if (path.regex.test(url)) {
+                        helper = value;
+                        cache[url] = path;
+                        break;
+                    }
+                }
+            }
+
+            let quota = {};
+
+            if (helper) {
+                const {
+                    managerName,
                     getScope,
                     getResource
-                }] of _.toPairs(paths)) {
-                if (regex.test(url)) {
-                    grant = await this.quotaClient.requestQuota(
-                        `${this.managerPrefix}-${managerName}`,
-                        getScope(parameters),
-                        getResource(parameters),
-                        parameters.params.quota || {}
-                    );
-                    break;
+                } = helper;
+                
+                if(_.isString(managerName)) {
+                    quota.managerName = managerName;
                 }
+
+                if(_.isFunction(getScope)) {
+                    quota.scope = getScope(parameters);
+                }
+
+                if(_.isFunction(getResource)) {
+                    quota.resources = getResource(parameters);
+                }
+            }
+
+            Object.assign(quota, parameters.params.quota);
+
+            if (quota.managerName) {
+                const {
+                    managerName,
+                    scope,
+                    resources,
+                    options
+                } = helper;
+
+                grant = await this.quotaClient.requestQuota(
+                    `${this.managerPrefix}-${managerName}`,
+                    scope,
+                    resources,
+                    options
+                );
             }
         }
 

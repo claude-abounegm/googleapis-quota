@@ -21,6 +21,6 @@
   },
   "peerDependencies": {
     "quota": "claude-abounegm/quota#master",
-    "googleapis-common": "^0.7.2"
+    "googleapis": "^38.0.0"
   }
 }
