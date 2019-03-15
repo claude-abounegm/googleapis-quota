@@ -36,7 +36,7 @@ module.exports = (function () {
     let quotaClient;
     let managerPrefix;
 
-    function init(quotaServers, prefix = 'ga') {
+    function start(quotaServers, prefix = 'ga') {
         quotaClient = new quota.Client(quotaServers);
         managerPrefix = prefix;
 
@@ -53,7 +53,7 @@ module.exports = (function () {
         };
     }
 
-    function reset() {
+    function stop() {
         if (common._createAPIRequest) {
             common.createAPIRequest = common._createAPIRequest;
         }
@@ -131,7 +131,7 @@ module.exports = (function () {
     }
 
     return {
-        init,
-        reset
+        start,
+        stop
     };
 })();
