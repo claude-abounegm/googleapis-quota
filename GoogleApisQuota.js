@@ -32,10 +32,11 @@ module.exports = (function () {
         // 'real-time': /\/data\/realtime$/,
         // 'mcf': /\/data\/mcf$/
     ];
+
     let quotaClient;
     let managerPrefix;
 
-    function init() {
+    function init(quotaServers, managerPrefix = 'ga') {
         quotaClient = new quota.Client(quotaServers);
         managerPrefix = managerPrefix;
 
@@ -83,7 +84,7 @@ module.exports = (function () {
             }
 
             let helper = cache[url];
-            let quota = Object.assign({}, parameters.params.quota);
+            let quota = Object.assign({ managerName: 'general' }, parameters.params.quota);
 
             if (helper) {
                 if (!quota.managerName && _.isString(helper.managerName)) {
@@ -99,21 +100,19 @@ module.exports = (function () {
                 }
             }
 
-            if (quota.managerName) {
-                const {
-                    managerName,
-                    scope,
-                    resources,
-                    options
-                } = quota;
+            const {
+                managerName,
+                scope,
+                resources,
+                options
+            } = quota;
 
-                grant = await this.quotaClient.requestQuota(
-                    managerName ? `${this.managerPrefix}-${managerName}` : this.managerPrefix,
-                    scope,
-                    resources,
-                    options
-                );
-            }
+            grant = await quotaClient.requestQuota(
+                `${managerPrefix}-${managerName}`,
+                scope,
+                resources,
+                options
+            );
         }
 
         let error;
