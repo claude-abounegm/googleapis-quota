@@ -6,23 +6,23 @@ const common = require('googleapis-common');
 
 const cache = {};
 const paths = [{
-        managerName: 'core',
-        regex: /\/data\/ga$/,
-        getScope: ({
-            params: {
-                ids
-            }
-        }) => {
-            return {
-                'viewId': /ga:([0-9]+)/.exec(ids)[1]
-            };
-        },
-        getResource: () => {
-            return {
-                requests: 1
-            };
+    managerName: 'core',
+    regex: /\/data\/ga$/,
+    getScope: ({
+        params: {
+            ids
         }
+    }) => {
+        return {
+            'viewId': /ga:([0-9]+)/.exec(ids)[1]
+        };
     },
+    getResource: () => {
+        return {
+            requests: 1
+        };
+    }
+},
     // 'provisioning': /\/provisioning\/.+$/,
     // 'real-time': /\/data\/realtime$/,
     // 'mcf': /\/data\/mcf$/,
@@ -79,42 +79,31 @@ class GoogleApisQuota {
         const url = parameters.options.url;
         let grant;
         if (url) {
-            let helper;
-            if (cache[url]) {
-                helper = cache[url];
-            } else {
+            if (!cache[url]) {
                 for (const path of paths) {
                     if (path.regex.test(url)) {
-                        helper = value;
                         cache[url] = path;
                         break;
                     }
                 }
             }
 
-            let quota = {};
+            let helper = cache[url];
+            let quota = Object.assign({}, parameters.params.quota);
 
             if (helper) {
-                const {
-                    managerName,
-                    getScope,
-                    getResource
-                } = helper;
-                
-                if(_.isString(managerName)) {
-                    quota.managerName = managerName;
+                if (!quota.managerName && _.isString(helper.managerName)) {
+                    quota.managerName = helper.managerName;
                 }
 
-                if(_.isFunction(getScope)) {
-                    quota.scope = getScope(parameters);
+                if (!quota.scope && _.isFunction(helper.getScope)) {
+                    quota.scope = helper.getScope(parameters);
                 }
 
-                if(_.isFunction(getResource)) {
-                    quota.resources = getResource(parameters);
+                if (!quota.resources && _.isFunction(helper.getResource)) {
+                    quota.resources = helper.getResource(parameters);
                 }
             }
-
-            Object.assign(quota, parameters.params.quota);
 
             if (quota.managerName) {
                 const {
@@ -122,7 +111,7 @@ class GoogleApisQuota {
                     scope,
                     resources,
                     options
-                } = helper;
+                } = quota;
 
                 grant = await this.quotaClient.requestQuota(
                     `${this.managerPrefix}-${managerName}`,
