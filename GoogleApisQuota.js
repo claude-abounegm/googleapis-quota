@@ -1,77 +1,71 @@
 'use strict';
 
-const _ = require('lodash');
-const quota = require('quota');
-const common = require('googleapis-common');
+module.exports = (function () {
+    const _ = require('lodash');
+    const quota = require('quota');
+    const common = require('googleapis-common');
 
-const cache = {};
-const paths = [{
-    managerName: 'core',
-    regex: /\/data\/ga$/,
-    getScope: ({
-        params: {
-            ids
-        }
-    }) => {
-        return {
-            'viewId': /ga:([0-9]+)/.exec(ids)[1]
-        };
-    },
-    getResource: () => {
-        return {
-            requests: 1
-        };
-    }
-},
-    // 'provisioning': /\/provisioning\/.+$/,
-    // 'real-time': /\/data\/realtime$/,
-    // 'mcf': /\/data\/mcf$/,
-    // 'management': /\/management\/.+$/
-];
+    const cache = {};
+    const paths = [{
+            managerName: 'core',
+            regex: /\/data\/ga$/,
+            getScope: ({
+                params: {
+                    ids
+                }
+            }) => {
+                return {
+                    'viewId': /ga:([0-9]+)/.exec(ids)[1]
+                };
+            },
+            getResource: () => {
+                return {
+                    requests: 1
+                };
+            }
+        },
+        {
+            managerName: 'management',
+            regex: /\/management\/.+$/
+        },
+        // 'provisioning': /\/provisioning\/.+$/,
+        // 'real-time': /\/data\/realtime$/,
+        // 'mcf': /\/data\/mcf$/
+    ];
+    let quotaClient;
+    let managerPrefix;
 
-class GoogleApisQuota {
-    constructor(quotaServers, managerPrefix = 'ga') {
-        this.quotaClient = new quota.Client(quotaServers);
-        this.managerPrefix = managerPrefix;
+    function init() {
+        quotaClient = new quota.Client(quotaServers);
+        managerPrefix = managerPrefix;
 
         if (!common._createAPIRequest) {
             common._createAPIRequest = common.createAPIRequest;
         }
 
-        this._init();
-    }
-
-    reset() {
-        GoogleApisQuota.reset();
-
-        if (this.quotaClient) {
-            this.quotaClient.dispose();
-        }
-    }
-
-    static reset() {
-        if (common._createAPIRequest) {
-            common.createAPIRequest = common._createAPIRequest;
-        }
-    }
-
-    /**
-     * @private
-     */
-    _init() {
         common.createAPIRequest = (parameters, callback) => {
             if (callback) {
-                this.createAPIRequestAsync(parameters).then(r => callback(null, r), callback);
+                createAPIRequestAsync(parameters).then(r => callback(null, r), callback);
             } else {
-                return this.createAPIRequestAsync(parameters);
+                return createAPIRequestAsync(parameters);
             }
         };
     }
 
+    function reset() {
+        if (common._createAPIRequest) {
+            common.createAPIRequest = common._createAPIRequest;
+        }
+
+        if (quotaClient) {
+            quotaClient.dispose();
+        }
+    }
+
     /**
      * @private
      */
-    async createAPIRequestAsync(parameters) {
+    async function createAPIRequestAsync(parameters) {
         if (parameters.params.quota === false) {
             return common._createAPIRequest(parameters);
         }
@@ -114,7 +108,7 @@ class GoogleApisQuota {
                 } = quota;
 
                 grant = await this.quotaClient.requestQuota(
-                    `${this.managerPrefix}-${managerName}`,
+                    managerName ? `${this.managerPrefix}-${managerName}` : this.managerPrefix,
                     scope,
                     resources,
                     options
@@ -134,6 +128,9 @@ class GoogleApisQuota {
             });
         }
     }
-}
 
-module.exports = GoogleApisQuota;
+    return {
+        init,
+        reset
+    };
+})();
