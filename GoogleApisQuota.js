@@ -36,9 +36,9 @@ module.exports = (function () {
     let quotaClient;
     let managerPrefix;
 
-    function init(quotaServers, managerPrefix = 'ga') {
+    function init(quotaServers, prefix = 'ga') {
         quotaClient = new quota.Client(quotaServers);
-        managerPrefix = managerPrefix;
+        managerPrefix = prefix;
 
         if (!common._createAPIRequest) {
             common._createAPIRequest = common.createAPIRequest;
@@ -60,6 +60,8 @@ module.exports = (function () {
 
         if (quotaClient) {
             quotaClient.dispose();
+            quotaClient = undefined;
+            managerPrefix = undefined;
         }
     }
 
